@@ -11,7 +11,7 @@ app.use(express.json());
 // 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion , ObjectId} = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.t0jep8i.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -36,6 +36,13 @@ async function run() {
 
     app.get("/properties" , async (req , res) => {
         const result = await propertiesCollection.find().toArray();
+        res.send(result);
+    })
+
+    app.get("/property/:id" , async (req , res) => {
+        const id = req.params.id;
+        const query = { _id : new ObjectId(id)};
+        const result = await propertiesCollection.findOne(query);
         res.send(result);
     })
     // Connect the client to the server	(optional starting in v4.7)
