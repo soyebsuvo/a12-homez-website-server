@@ -28,12 +28,14 @@ async function run() {
     const database = client.db("HomezDb");
     const advertisementsCollection = database.collection("advertisements");
     const propertiesCollection = database.collection("properties");
+    const wishlistCollection = database.collection("wishlist");
 
+    // advertise api 
     app.get("/advertisements" , async (req , res) => {
         const result = await advertisementsCollection.find().toArray();
         res.send(result);
     })
-
+    // property api 
     app.get("/properties" , async (req , res) => {
         const result = await propertiesCollection.find().toArray();
         res.send(result);
@@ -44,6 +46,14 @@ async function run() {
         const query = { _id : new ObjectId(id)};
         const result = await propertiesCollection.findOne(query);
         res.send(result);
+    })
+
+    // wishlist api 
+
+    app.post("/wishlist" , async (req , res) => {
+      const item = req.body;
+      const result = await wishlistCollection.insertOne(item);
+      res.send(result);
     })
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
