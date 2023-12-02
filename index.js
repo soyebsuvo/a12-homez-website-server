@@ -55,6 +55,10 @@ async function run() {
       const result = await wishlistCollection.insertOne(item);
       res.send(result);
     })
+    app.get("/wishlistCount" , async (req , res) => {
+      const count = await wishlistCollection.estimatedDocumentCount();
+      res.send({count})
+    })
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
