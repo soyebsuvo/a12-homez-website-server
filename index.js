@@ -29,6 +29,7 @@ async function run() {
     const advertisementsCollection = database.collection("advertisements");
     const propertiesCollection = database.collection("properties");
     const wishlistCollection = database.collection("wishlist");
+    const offeredCollection = database.collection("offered");
 
     // advertise api 
     app.get("/advertisements" , async (req , res) => {
@@ -62,6 +63,12 @@ async function run() {
       const result = await wishlistCollection.find(query).toArray();
       res.send(result);
     })
+    app.get("/wishlist/:id" , async (req , res) => {
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await wishlistCollection.findOne(query);
+      res.send(result);
+    })
     app.delete("/wishlist/:id" , async (req , res) => {
       const id = req.params.id;
       const query = { _id : new ObjectId(id)};
@@ -71,6 +78,12 @@ async function run() {
     app.get("/wishlistCount" , async (req , res) => {
       const count = await wishlistCollection.estimatedDocumentCount();
       res.send({count})
+    })
+
+    app.post("/offeredProperties" , async (req , res) => {
+      const property = req.body;
+      const result = await offeredCollection.insertOne(property);
+      res.send(result);
     })
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
