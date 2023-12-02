@@ -55,6 +55,13 @@ async function run() {
       const result = await wishlistCollection.insertOne(item);
       res.send(result);
     })
+
+    app.get("/wishlist" , async (req , res) => {
+      const email = req.query.email;
+      const query = { email : email};
+      const result = await wishlistCollection.find(query).toArray();
+      res.send(result);
+    })
     app.get("/wishlistCount" , async (req , res) => {
       const count = await wishlistCollection.estimatedDocumentCount();
       res.send({count})
