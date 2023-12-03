@@ -44,6 +44,25 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/user/admin/:email" , async (req , res) => {
+      const email = req?.params?.email;
+      const query = { email : email};
+      const user = await usersCollection.findOne(query);
+      if(user){
+        if(!user?.role){
+          res.send({role : null})
+        }else if(user?.role === "agent"){
+          res.send({role : user?.role})
+        }else if(user?.role === "admin"){
+          res.send({role : user?.role})
+        }else{
+          res.send({message : "unauthorized access"})
+        }
+      }else{
+        res.send({message : "user not found"})
+      }
+    })
+
     // advertise api
     app.get("/advertisements", async (req, res) => {
       const result = await advertisementsCollection.find().toArray();
@@ -148,6 +167,42 @@ async function run() {
       }
       const result = await offeredCollection.find(query).toArray();
       res.send(result); 
+    })
+
+    app.patch("/requested/accept/:id" , async (req , res) => {
+      const id = req.params.id;
+      const image = req.query.image;
+      const title = req.query.title;
+      const filter2 = { image : image , title : title};
+      const options2 = { upsert : true };
+      const updateDoc2 = {
+        $set : {
+          status : 'rejected',
+        }
+      }
+      const result2 = await offeredCollection.updateMany(filter2 , updateDoc2 , options2)
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          status : "accepted",
+        }
+      }
+      const result = await offeredCollection.updateOne(filter , updateDoc , options);
+      
+      res.send(result);
+    })
+    app.patch("/requested/reject/:id" , async (req , res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          status : "rejected",
+        }
+      }
+      const result = await offeredCollection.updateOne(filter , updateDoc , options);
+      res.send(result);
     })
 
     app.get("/offeredProperties", async (req, res) => {
