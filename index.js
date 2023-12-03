@@ -30,10 +30,24 @@ async function run() {
     const propertiesCollection = database.collection("properties");
     const wishlistCollection = database.collection("wishlist");
     const offeredCollection = database.collection("offered");
+    const usersCollection = database.collection("users");
+    // await client.connect();
+
+    // users api 
+    app.post("/users" , async (req , res) => {
+      const user = req.body;
+      const query = { email : user?.email};
+      const exist = await usersCollection.findOne(query);
+      if(exist){
+        return res.send({message : "already have this user"})
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result)
+    })
 
     // advertise api 
     app.get("/advertisements" , async (req , res) => {
-        const result = await advertisementsCollection.find().toArray();
+      const result = await advertisementsCollection.find().toArray();
         res.send(result);
     })
     // property api 
@@ -93,7 +107,6 @@ async function run() {
       res.send(result);
     })
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
