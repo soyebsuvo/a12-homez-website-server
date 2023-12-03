@@ -75,9 +75,15 @@ async function run() {
       const result = await propertiesCollection.deleteOne(query);
       res.send(result);
     });
+
+    app.get('/unverifiedProperties' , async (req , res) => {
+      const query = { verification_status : { $in: ["unverified", "rejected"] } }
+      const result = await propertiesCollection.find(query).toArray();
+      res.send(result);
+    })
     app.get("/properties", async (req, res) => {
       const email = req.query.email;
-      let query = {};
+      let query = { verification_status : 'verified'};
       if (email) {
         query = { agent_email: email };
       }
@@ -192,6 +198,18 @@ async function run() {
       
       res.send(result);
     })
+    app.patch("/requested/verify/property/:id" , async (req , res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          verification_status : "verified",
+        }
+      }
+      const result = await propertiesCollection.updateOne(filter , updateDoc , options);      
+      res.send(result);
+    })
     app.patch("/requested/reject/:id" , async (req , res) => {
       const id = req.params.id;
       const filter = { _id : new ObjectId(id)};
@@ -202,6 +220,18 @@ async function run() {
         }
       }
       const result = await offeredCollection.updateOne(filter , updateDoc , options);
+      res.send(result);
+    })
+    app.patch("/requested/reject/property/:id" , async (req , res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          verification_status : "rejected",
+        }
+      }
+      const result = await propertiesCollection.updateOne(filter , updateDoc , options);
       res.send(result);
     })
 
