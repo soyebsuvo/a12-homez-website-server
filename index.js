@@ -44,6 +44,60 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/user/makeAgent/:id" , async (req , res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          role : "agent"
+        }
+      }
+      const result = await usersCollection.updateOne(filter , updateDoc , options);
+      res.send(result);
+    })
+    app.patch("/user/makeAdmin/:id" , async (req , res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          role : "admin"
+        }
+      }
+      const result = await usersCollection.updateOne(filter , updateDoc , options);
+      res.send(result);
+    })
+    app.patch("/user/makeFraud/:id" , async (req , res) => {
+      const id = req.params.id;
+      const email = req.query.email;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          role : "fraud"
+        }
+      }
+      const query = { agent_email : email };
+      const deleteProperties = await propertiesCollection.deleteMany(query);
+      const deleteOffered = await offeredCollection.deleteMany(query);
+      const deleteWishlist = await wishlistCollection.deleteMany(query);
+      const result = await usersCollection.updateOne(filter , updateDoc , options);
+      res.send(result);
+    })
+
+    app.delete("/users/:id" , async (req , res) => {
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    app.get("/users" , async (req , res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    })
+
     app.get("/user/admin/:email" , async (req , res) => {
       const email = req?.params?.email;
       const query = { email : email};
