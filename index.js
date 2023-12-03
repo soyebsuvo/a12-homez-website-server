@@ -51,9 +51,33 @@ async function run() {
         res.send(result);
     })
     // property api 
+    app.delete("/properties/:id" , async ( req , res) => {
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await propertiesCollection.deleteOne(query);
+      res.send(result)
+    })
     app.get("/properties" , async (req , res) => {
-        const result = await propertiesCollection.find().toArray();
+      const email = req.query.email;
+      let query = {};
+      if(email){
+        query = {email : email};
+      }
+        const result = await propertiesCollection.find(query).toArray();
         res.send(result);
+    })
+
+    app.get("/properties/:id" , async (req , res) => {
+      const id = req.params.id;
+      const query = { _id : new ObjectId(id)};
+      const result = await propertiesCollection.findOne(query);
+      res.send(result);
+    })
+
+    app.post('/properties' , async (req , res) => {
+      const property = req.body;
+      const result = await propertiesCollection.insertOne(property);
+      res.send(result);
     })
 
     app.get("/property/:id" , async (req , res) => {
