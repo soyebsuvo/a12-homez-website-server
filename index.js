@@ -75,14 +75,21 @@ async function run() {
       const result = await wishlistCollection.deleteOne(query);
       res.send(result);
     })
-    app.get("/wishlistCount" , async (req , res) => {
-      const count = await wishlistCollection.estimatedDocumentCount();
-      res.send({count})
-    })
+    // app.get("/wishlistCount" , async (req , res) => {
+    //   const count = await wishlistCollection.estimatedDocumentCount();
+    //   res.send({count})
+    // })
 
     app.post("/offeredProperties" , async (req , res) => {
       const property = req.body;
       const result = await offeredCollection.insertOne(property);
+      res.send(result);
+    })
+
+    app.get("/offeredProperties" , async (req , res) => {
+      const email = req.query.email;
+      const query = { email : email};
+      const result = await offeredCollection.find(query).toArray();
       res.send(result);
     })
     // Connect the client to the server	(optional starting in v4.7)
