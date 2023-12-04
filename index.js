@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 app.use(cors());
@@ -30,6 +31,7 @@ async function run() {
     const wishlistCollection = database.collection("wishlist");
     const offeredCollection = database.collection("offered");
     const usersCollection = database.collection("users");
+    const paymentsCollection = database.collection("payments");
     // await client.connect();
 
     // users api
@@ -44,78 +46,90 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/user/makeAgent/:id" , async (req , res) => {
+    app.patch("/user/makeAgent/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updateDoc = {
-        $set : {
-          role : "agent"
-        }
-      }
-      const result = await usersCollection.updateOne(filter , updateDoc , options);
+        $set: {
+          role: "agent",
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
-    app.patch("/user/makeAdmin/:id" , async (req , res) => {
+    });
+    app.patch("/user/makeAdmin/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updateDoc = {
-        $set : {
-          role : "admin"
-        }
-      }
-      const result = await usersCollection.updateOne(filter , updateDoc , options);
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
-    app.patch("/user/makeFraud/:id" , async (req , res) => {
+    });
+    app.patch("/user/makeFraud/:id", async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
       const updateDoc = {
-        $set : {
-          role : "fraud"
-        }
-      }
-      const query = { agent_email : email };
+        $set: {
+          role: "fraud",
+        },
+      };
+      const query = { agent_email: email };
       const deleteProperties = await propertiesCollection.deleteMany(query);
       const deleteOffered = await offeredCollection.deleteMany(query);
       const deleteWishlist = await wishlistCollection.deleteMany(query);
-      const result = await usersCollection.updateOne(filter , updateDoc , options);
+      const result = await usersCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
       res.send(result);
-    })
+    });
 
-    app.delete("/users/:id" , async (req , res) => {
+    app.delete("/users/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id : new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
       res.send(result);
-    })
+    });
 
-    app.get("/users" , async (req , res) => {
+    app.get("/users", async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
-    })
+    });
 
-    app.get("/user/admin/:email" , async (req , res) => {
+    app.get("/user/admin/:email", async (req, res) => {
       const email = req?.params?.email;
-      const query = { email : email};
+      const query = { email: email };
       const user = await usersCollection.findOne(query);
-      if(user){
-        if(!user?.role){
-          res.send({role : null})
-        }else if(user?.role === "agent"){
-          res.send({role : user?.role})
-        }else if(user?.role === "admin"){
-          res.send({role : user?.role})
-        }else{
-          res.send({message : "unauthorized access"})
+      if (user) {
+        if (!user?.role) {
+          res.send({ role: null });
+        } else if (user?.role === "agent") {
+          res.send({ role: user?.role });
+        } else if (user?.role === "admin") {
+          res.send({ role: user?.role });
+        } else {
+          res.send({ message: "unauthorized access" });
         }
-      }else{
-        res.send({message : "user not found"})
+      } else {
+        res.send({ message: "user not found" });
       }
-    })
+    });
 
     // advertise api
     app.get("/advertisements", async (req, res) => {
@@ -130,14 +144,16 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/unverifiedProperties' , async (req , res) => {
-      const query = { verification_status : { $in: ["unverified", "rejected"] } }
+    app.get("/unverifiedProperties", async (req, res) => {
+      const query = {
+        verification_status: { $in: ["unverified", "rejected"] },
+      };
       const result = await propertiesCollection.find(query).toArray();
       res.send(result);
-    })
+    });
     app.get("/properties", async (req, res) => {
       const email = req.query.email;
-      let query = { verification_status : 'verified'};
+      let query = { verification_status: "verified" };
       if (email) {
         query = { agent_email: email };
       }
@@ -165,14 +181,18 @@ async function run() {
       const options = { upsert: true };
       const updateDoc = {
         $set: {
-          title : property?.title,
-          location : property?.location,
-          price : property?.price,
-          desc : property?.desc
+          title: property?.title,
+          location: property?.location,
+          price: property?.price,
+          desc: property?.desc,
         },
       };
-      const result = await propertiesCollection.updateOne(filter, updateDoc , options);
-      res.send(result)
+      const result = await propertiesCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
     });
 
     app.get("/property/:id", async (req, res) => {
@@ -213,91 +233,140 @@ async function run() {
     //   res.send({count})
     // })
 
-    app.post("/offeredProperties", async (req, res) => {
+    app.post("/offeredProperties/:id", async (req, res) => {
+      const id = req.params.id;
       const property = req.body;
+      const query = { _id : new ObjectId(id)};
+      const deleteResult = await wishlistCollection.deleteOne(query);
       const result = await offeredCollection.insertOne(property);
       res.send(result);
     });
 
-    app.get("/requestedProperties" , async (req , res) => {
+    app.get("/requestedProperties", async (req, res) => {
       const email = req.query.email;
       let query = {};
-      if(email){
-        query = { agent_email : email };
-      }
-      const result = await offeredCollection.find(query).toArray();
-      res.send(result); 
-    })
-
-    app.patch("/requested/accept/:id" , async (req , res) => {
-      const id = req.params.id;
-      const image = req.query.image;
-      const title = req.query.title;
-      const filter2 = { image : image , title : title};
-      const options2 = { upsert : true };
-      const updateDoc2 = {
-        $set : {
-          status : 'rejected',
-        }
-      }
-      const result2 = await offeredCollection.updateMany(filter2 , updateDoc2 , options2)
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
-      const updateDoc = {
-        $set : {
-          status : "accepted",
-        }
-      }
-      const result = await offeredCollection.updateOne(filter , updateDoc , options);
-      
-      res.send(result);
-    })
-    app.patch("/requested/verify/property/:id" , async (req , res) => {
-      const id = req.params.id;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
-      const updateDoc = {
-        $set : {
-          verification_status : "verified",
-        }
-      }
-      const result = await propertiesCollection.updateOne(filter , updateDoc , options);      
-      res.send(result);
-    })
-    app.patch("/requested/reject/:id" , async (req , res) => {
-      const id = req.params.id;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
-      const updateDoc = {
-        $set : {
-          status : "rejected",
-        }
-      }
-      const result = await offeredCollection.updateOne(filter , updateDoc , options);
-      res.send(result);
-    })
-    app.patch("/requested/reject/property/:id" , async (req , res) => {
-      const id = req.params.id;
-      const filter = { _id : new ObjectId(id)};
-      const options = { upsert : true };
-      const updateDoc = {
-        $set : {
-          verification_status : "rejected",
-        }
-      }
-      const result = await propertiesCollection.updateOne(filter , updateDoc , options);
-      res.send(result);
-    })
-
-    app.get("/offeredProperties", async (req, res) => {
-      const email = req.query.email;
-      let query = {};
-      if(email){
-        query = { email : email };
+      if (email) {
+        query = { agent_email: email };
       }
       const result = await offeredCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.patch("/requested/accept/:id", async (req, res) => {
+      const id = req.params.id;
+      const image = req.query.image;
+      const title = req.query.title;
+      const filter2 = { image: image, title: title };
+      const options2 = { upsert: true };
+      const updateDoc2 = {
+        $set: {
+          status: "rejected",
+        },
+      };
+      const result2 = await offeredCollection.updateMany(
+        filter2,
+        updateDoc2,
+        options2
+      );
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          status: "accepted",
+        },
+      };
+      const result = await offeredCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+
+      res.send(result);
+    });
+    app.patch("/requested/verify/property/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          verification_status: "verified",
+        },
+      };
+      const result = await propertiesCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+    app.patch("/requested/reject/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          status: "rejected",
+        },
+      };
+      const result = await offeredCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+    app.patch("/requested/reject/property/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          verification_status: "rejected",
+        },
+      };
+      const result = await propertiesCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.get("/offeredProperties", async (req, res) => {
+      const email = req.query.email;
+      let query = {};
+      if (email) {
+        query = { email: email };
+      }
+      const result = await offeredCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // payment intent
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount : amount,
+        currency : "usd",
+        payment_method_types : ['card']
+      })
+      res.send({
+        clientSecret : paymentIntent.client_secret
+      })
+    });
+
+    app.post('/payments' , async (req , res) => {
+      const payment = req.body;
+      const paymentResult = await paymentsCollection.insertOne(payment);
+      const query = { _id: {
+        $in : payment?.propertyBoughtIds?.map(id => new ObjectId(id))
+      }}
+      const deleteResult = await offeredCollection.deleteMany(query);
+
+      res.send(paymentResult);
+    })
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
