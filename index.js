@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
@@ -35,6 +36,29 @@ async function run() {
     const soldPropertiesCollection = database.collection("soldProperties");
     // await client.connect();
 
+    // api for jwt authorize 
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET_TOKEN, { expiresIn: '10h' });
+      res.send({ token });
+    })
+
+    // middlewares 
+
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+      }
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.SECRET_TOKEN, (error, decoded) => {
+        if (error) {
+          return res.status(401).send({ message: 'unauthorized access' })
+        }
+        req.user = decoded;
+        next();
+      })
+    }
+
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -47,7 +71,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/user/makeAgent/:id", async (req, res) => {
+    app.patch("/user/makeAgent/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -63,7 +87,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/user/makeAdmin/:id", async (req, res) => {
+    app.patch("/user/makeAdmin/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -79,7 +103,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/user/makeFraud/:id", async (req, res) => {
+    app.patch("/user/makeFraud/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
       const filter = { _id: new ObjectId(id) };
@@ -101,19 +125,19 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/users/:id", async (req, res) => {
+    app.delete("/users/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyToken , async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
 
-    app.get("/user/admin/:email", async (req, res) => {
+    app.get("/user/admin/:email", verifyToken , async (req, res) => {
       const email = req?.params?.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
@@ -138,21 +162,21 @@ async function run() {
       res.send(result);
     });
     // property api
-    app.delete("/properties/:id", async (req, res) => {
+    app.delete("/properties/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await propertiesCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.get("/unverifiedProperties", async (req, res) => {
+    app.get("/unverifiedProperties", verifyToken , async (req, res) => {
       const query = {
         verification_status: { $in: ["unverified", "rejected"] },
       };
       const result = await propertiesCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/properties", async (req, res) => {
+    app.get("/properties", verifyToken , async (req, res) => {
       const email = req.query.email;
       let query = { verification_status: "verified" };
       if (email) {
@@ -162,20 +186,20 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/properties/:id", async (req, res) => {
+    app.get("/properties/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await propertiesCollection.findOne(query);
       res.send(result);
     });
 
-    app.post("/properties", async (req, res) => {
+    app.post("/properties", verifyToken , async (req, res) => {
       const property = req.body;
       const result = await propertiesCollection.insertOne(property);
       res.send(result);
     });
 
-    app.patch("/properties/:id", async (req, res) => {
+    app.patch("/properties/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const property = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -196,7 +220,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/property/:id", async (req, res) => {
+    app.get("/property/:id",verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await propertiesCollection.findOne(query);
@@ -205,25 +229,25 @@ async function run() {
 
     // wishlist api
 
-    app.post("/wishlist", async (req, res) => {
+    app.post("/wishlist", verifyToken , async (req, res) => {
       const item = req.body;
       const result = await wishlistCollection.insertOne(item);
       res.send(result);
     });
 
-    app.get("/wishlist", async (req, res) => {
+    app.get("/wishlist", verifyToken , async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await wishlistCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/wishlist/:id", async (req, res) => {
+    app.get("/wishlist/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await wishlistCollection.findOne(query);
       res.send(result);
     });
-    app.delete("/wishlist/:id", async (req, res) => {
+    app.delete("/wishlist/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await wishlistCollection.deleteOne(query);
@@ -234,7 +258,7 @@ async function run() {
     //   res.send({count})
     // })
 
-    app.post("/offeredProperties/:id", async (req, res) => {
+    app.post("/offeredProperties/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const property = req.body;
       const query = { _id : new ObjectId(id)};
@@ -244,7 +268,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requestedProperties", async (req, res) => {
+    app.get("/requestedProperties", verifyToken , async (req, res) => {
       const email = req.query.email;
       let query = {};
       if (email) {
@@ -254,7 +278,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/requested/accept/:id", async (req, res) => {
+    app.patch("/requested/accept/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const image = req.query.image;
       const title = req.query.title;
@@ -285,7 +309,7 @@ async function run() {
 
       res.send(result);
     });
-    app.patch("/requested/verify/property/:id", async (req, res) => {
+    app.patch("/requested/verify/property/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -301,7 +325,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/requested/reject/:id", async (req, res) => {
+    app.patch("/requested/reject/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -317,7 +341,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/requested/reject/property/:id", async (req, res) => {
+    app.patch("/requested/reject/property/:id", verifyToken , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -334,7 +358,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/offeredProperties", async (req, res) => {
+    app.get("/offeredProperties", verifyToken , async (req, res) => {
       const email = req.query.email;
       let query = {};
       if (email) {
@@ -346,7 +370,7 @@ async function run() {
 
     // payment intent
 
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyToken , async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
       const paymentIntent = await stripe.paymentIntents.create({
@@ -359,7 +383,7 @@ async function run() {
       })
     });
 
-    app.post('/payments' , async (req , res) => {
+    app.post('/payments' , verifyToken , async (req , res) => {
       const payment = req.body;
       const paymentResult = await paymentsCollection.insertOne(payment);
       const query = { _id: {
@@ -370,7 +394,7 @@ async function run() {
       res.send(paymentResult);
     })
 
-    app.get("/payments" , async (req ,res) => {
+    app.get("/payments" , verifyToken , async (req ,res) => {
       const email = req.query.email;
       const allPayments = await paymentsCollection.find({}).toArray();
       const allIds = allPayments.reduce((acc , doc) => acc.concat(doc.propertyBoughtIds || []),[]);
