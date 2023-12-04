@@ -239,6 +239,15 @@ async function run() {
       const result = await propertiesCollection.find(query).toArray();
       res.send(result);
     });
+    app.get("/propertiesbysearch", verifyToken , async (req, res) => {      
+      let query = {};
+      if (req.query.search) {
+        const pattern = new RegExp(req.query.search , "i")
+        query = { title: { $regex: pattern } };
+      }
+      const result = await propertiesCollection.find(query).toArray();
+      res.send(result);
+    });
 
     app.get("/properties/:id" , async (req, res) => {
       const id = req.params.id;
