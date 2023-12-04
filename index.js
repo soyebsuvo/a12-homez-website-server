@@ -59,6 +59,29 @@ async function run() {
       })
     }
 
+    const verifyAgent = async (req, res, next) => {
+      const email = req.user.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isAgent = user?.role === 'agent';
+      if (!isAgent) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.user.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
+
     // users api
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -71,7 +94,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/user/makeAgent/:id", verifyToken , async (req, res) => {
+    app.patch("/user/makeAgent/:id", verifyToken , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -87,7 +110,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/user/makeAdmin/:id", verifyToken, async (req, res) => {
+    app.patch("/user/makeAdmin/:id", verifyToken, verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -103,7 +126,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/user/makeFraud/:id", verifyToken , async (req, res) => {
+    app.patch("/user/makeFraud/:id", verifyToken , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const email = req.query.email;
       const filter = { _id: new ObjectId(id) };
@@ -125,7 +148,7 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/users/:id", verifyToken , async (req, res) => {
+    app.delete("/users/:id", verifyToken , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await usersCollection.deleteOne(query);
@@ -162,14 +185,14 @@ async function run() {
       res.send(result);
     });
     // property api
-    app.delete("/properties/:id", verifyToken , async (req, res) => {
+    app.delete("/properties/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await propertiesCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.get("/unverifiedProperties", verifyToken , async (req, res) => {
+    app.get("/unverifiedProperties", verifyToken , verifyAdmin , async (req, res) => {
       const query = {
         verification_status: { $in: ["unverified", "rejected"] },
       };
@@ -193,13 +216,13 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/properties", verifyToken , async (req, res) => {
+    app.post("/properties", verifyToken , verifyAgent , async (req, res) => {
       const property = req.body;
       const result = await propertiesCollection.insertOne(property);
       res.send(result);
     });
 
-    app.patch("/properties/:id", verifyToken , async (req, res) => {
+    app.patch("/properties/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
       const property = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -220,7 +243,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/property/:id",verifyToken , async (req, res) => {
+    app.get("/property/:id" , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await propertiesCollection.findOne(query);
@@ -241,7 +264,7 @@ async function run() {
       const result = await wishlistCollection.find(query).toArray();
       res.send(result);
     });
-    app.get("/wishlist/:id", verifyToken , async (req, res) => {
+    app.get("/wishlist/:id" , async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await wishlistCollection.findOne(query);
@@ -268,7 +291,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requestedProperties", verifyToken , async (req, res) => {
+    app.get("/requestedProperties", verifyToken  , async (req, res) => {
       const email = req.query.email;
       let query = {};
       if (email) {
@@ -278,7 +301,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/requested/accept/:id", verifyToken , async (req, res) => {
+    app.patch("/requested/accept/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
       const image = req.query.image;
       const title = req.query.title;
@@ -309,7 +332,7 @@ async function run() {
 
       res.send(result);
     });
-    app.patch("/requested/verify/property/:id", verifyToken , async (req, res) => {
+    app.patch("/requested/verify/property/:id", verifyToken , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -325,7 +348,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/requested/reject/:id", verifyToken , async (req, res) => {
+    app.patch("/requested/reject/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -341,7 +364,7 @@ async function run() {
       );
       res.send(result);
     });
-    app.patch("/requested/reject/property/:id", verifyToken , async (req, res) => {
+    app.patch("/requested/reject/property/:id", verifyToken , verifyAdmin , async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -394,13 +417,14 @@ async function run() {
       res.send(paymentResult);
     })
 
-    app.get("/payments" , verifyToken , async (req ,res) => {
+    app.get("/payments" , verifyToken , verifyAgent , async (req ,res) => {
       const email = req.query.email;
       const allPayments = await paymentsCollection.find({}).toArray();
       const allIds = allPayments.reduce((acc , doc) => acc.concat(doc.propertyBoughtIds || []),[]);
       const objectIds = allIds.map(id => new ObjectId(id));
       const allPropertiesByPaymentIds = await soldPropertiesCollection.find({ _id : { $in : objectIds}}).toArray();
-      const mySoldProperties = allPropertiesByPaymentIds.filter(item => item.email === email);
+      const mySoldProperties = await allPropertiesByPaymentIds.filter(item => item.agent_email === email);
+      // console.log(mySoldProperties)
       res.send({mySoldProperties});
     })
     // Connect the client to the server	(optional starting in v4.7)
