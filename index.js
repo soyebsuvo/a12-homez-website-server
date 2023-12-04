@@ -303,9 +303,9 @@ async function run() {
 
     app.patch("/requested/accept/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
-      const image = req.query.image;
+      const location = req.query.location;
       const title = req.query.title;
-      const filter2 = { image: image, title: title };
+      const filter2 = { location: location, title: title };
       const options2 = { upsert: true };
       const updateDoc2 = {
         $set: {
