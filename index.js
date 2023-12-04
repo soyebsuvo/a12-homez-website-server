@@ -181,9 +181,35 @@ async function run() {
 
     // advertise api
     app.get("/advertisements", async (req, res) => {
-      const result = await advertisementsCollection.find().toArray();
+      const query = { add_status : true , verification_status : 'verified'};
+      const result = await propertiesCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.patch("/advertise/accept/:id" , async (req ,res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          add_status : true
+        }
+      }
+      const result = await propertiesCollection.updateOne(filter , updateDoc , options);
+      res.send(result)
+    })
+    app.patch("/advertise/remove/:id" , async (req ,res) => {
+      const id = req.params.id;
+      const filter = { _id : new ObjectId(id)};
+      const options = { upsert : true };
+      const updateDoc = {
+        $set : {
+          add_status : false
+        }
+      }
+      const result = await propertiesCollection.updateOne(filter , updateDoc , options);
+      res.send(result)
+    })
     // property api
     app.delete("/properties/:id", verifyToken , verifyAgent , async (req, res) => {
       const id = req.params.id;
