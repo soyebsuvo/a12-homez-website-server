@@ -32,6 +32,7 @@ async function run() {
     const offeredCollection = database.collection("offered");
     const usersCollection = database.collection("users");
     const paymentsCollection = database.collection("payments");
+    const soldPropertiesCollection = database.collection("soldProperties");
     // await client.connect();
 
     // users api
@@ -239,6 +240,7 @@ async function run() {
       const query = { _id : new ObjectId(id)};
       const deleteResult = await wishlistCollection.deleteOne(query);
       const result = await offeredCollection.insertOne(property);
+      const soldResult = await soldPropertiesCollection.insertOne(property);
       res.send(result);
     });
 
@@ -248,7 +250,7 @@ async function run() {
       if (email) {
         query = { agent_email: email };
       }
-      const result = await offeredCollection.find(query).toArray();
+      const result = await soldPropertiesCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -263,7 +265,7 @@ async function run() {
           status: "rejected",
         },
       };
-      const result2 = await offeredCollection.updateMany(
+      const result2 = await soldPropertiesCollection.updateMany(
         filter2,
         updateDoc2,
         options2
@@ -275,7 +277,7 @@ async function run() {
           status: "accepted",
         },
       };
-      const result = await offeredCollection.updateOne(
+      const result = await soldPropertiesCollection.updateOne(
         filter,
         updateDoc,
         options
@@ -308,7 +310,7 @@ async function run() {
           status: "rejected",
         },
       };
-      const result = await offeredCollection.updateOne(
+      const result = await soldPropertiesCollection.updateOne(
         filter,
         updateDoc,
         options
@@ -366,6 +368,16 @@ async function run() {
       const deleteResult = await offeredCollection.deleteMany(query);
 
       res.send(paymentResult);
+    })
+
+    app.get("/payments" , async (req ,res) => {
+      const email = req.query.email;
+      const allPayments = await paymentsCollection.find({}).toArray();
+      const allIds = allPayments.reduce((acc , doc) => acc.concat(doc.propertyBoughtIds || []),[]);
+      const objectIds = allIds.map(id => new ObjectId(id));
+      const allPropertiesByPaymentIds = await soldPropertiesCollection.find({ _id : { $in : objectIds}}).toArray();
+      const mySoldProperties = allPropertiesByPaymentIds.filter(item => item.email === email);
+      res.send({mySoldProperties});
     })
     // Connect the client to the server	(optional starting in v4.7)
     // Send a ping to confirm a successful connection
